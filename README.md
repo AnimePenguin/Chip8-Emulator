@@ -26,3 +26,7 @@ This emulator should work with most of the Chip-8 roms found on the internet.
 Quirks for 8XY6/8XYE and FX55/FX65 are not implemented.
 
 Some example games are provided in the "roms" folder
+
+### Resources
+- https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
+- https://en.wikipedia.org/wiki/CHIP-8
