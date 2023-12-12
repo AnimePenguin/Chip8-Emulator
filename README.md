@@ -1,4 +1,4 @@
-# Chip8 Emulator
+# Chip-8 Emulator
 A Chip-8 "Emulator" (technically interpreter) written in C using Raylib.
 
 Type `make release` to compile and then run the executable.
