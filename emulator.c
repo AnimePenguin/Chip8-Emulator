@@ -5,6 +5,10 @@
 #include "emulator.h"
 #include "cpu.h"
 
+// Drawing Consts
+#define CHIP8_BG_COLOR BLACK
+#define CHIP8_PIXEL_COLOR WHITE
+
 const BYTE FONT[] = {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -64,8 +68,8 @@ Rectangle getDrawArea() {
 void drawScreen(BYTE screenBuffer[H][W], const Rectangle* drawArea) {
 	BeginDrawing();
 
-		ClearBackground(WINDOW_BACKGROUND_COLOR);
-		DrawRectangleRec(*drawArea, BLACK);
+		ClearBackground(WINDOW_BG_COLOR);
+		DrawRectangleRec(*drawArea, CHIP8_BG_COLOR);
 
 		int blockSize = drawArea->width / W;
 
@@ -78,7 +82,7 @@ void drawScreen(BYTE screenBuffer[H][W], const Rectangle* drawArea) {
 				DrawRectangle(
 					drawArea->x + x*blockSize,
 					drawArea->y + y*blockSize, 
-					blockSize, blockSize, WHITE
+					blockSize, blockSize, CHIP8_PIXEL_COLOR
 				);
 			}
 		}
@@ -86,8 +90,10 @@ void drawScreen(BYTE screenBuffer[H][W], const Rectangle* drawArea) {
 	EndDrawing();
 }
 
-bool initEmulator(char* fileName) {
+void initEmulator(char* fileName) {
 	Sound beep = LoadSound("resources/beep.wav");
+
+	emulator_start:
 
 	CPU cpu = {
 		.programCounter = ROM_ADDRESS,
@@ -118,13 +124,16 @@ bool initEmulator(char* fileName) {
 	double last_time = GetTime();
 
 	bool halted = false;
-	bool shouldRestart = false;
 
-	while (!WindowShouldClose() && !shouldRestart) {
+	while (!WindowShouldClose()) {
 		if (IsKeyPressed(KEY_SPACE)) {
 			halted = !halted;
 		} else if (GetKeyPressed() == KEY_P) {
-			shouldRestart = true;
+			goto emulator_start; // Restart this function
+		}
+
+		if (IsWindowResized()) {
+			drawArea = getDrawArea();
 		}
 
 		if (halted) {
@@ -156,15 +165,9 @@ bool initEmulator(char* fileName) {
 				PlaySound(beep);
 			}
 
-			if (IsWindowResized()) {
-				drawArea = getDrawArea();
-			}
-
 			drawScreen(screenBuffer, &drawArea);
 		}
 	}
 	
 	UnloadSound(beep);
-
-	return shouldRestart;
 }

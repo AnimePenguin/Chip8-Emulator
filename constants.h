@@ -4,11 +4,8 @@ typedef unsigned char BYTE;
 
 #define NULL ((void *)0)
 
-// GUI Consts
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
-
-#define WINDOW_BACKGROUND_COLOR (Color) {10, 10, 10, 255}
+// GUI/Drawing Consts
+#define WINDOW_BG_COLOR (Color) {10, 10, 10, 255}
 
 // Chip-8 Consts
 #define W 64 // SCREEN_WIDTH

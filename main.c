@@ -2,6 +2,9 @@
 
 #include "emulator.h"
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 int main(int argc, char* argv[]) {
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Chip-8 Emulator");
@@ -29,7 +32,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	if (fileName != NULL) {
-		while (initEmulator(fileName));
+		initEmulator(fileName);
 		MemFree(fileName);
 	} else {
 		initEmulator("resources/no_rom.ch8");

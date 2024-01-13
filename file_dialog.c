@@ -10,6 +10,8 @@
 #define DIALOG_WIDTH 480
 #define DIALOG_HEIGHT 460
 
+#define DIRECTORY_ITEM_HEIGHT 20
+
 Rectangle getWindowBoxRect() {
 	Rectangle windowBoxRect = {
 		(GetScreenWidth() - DIALOG_WIDTH)/2, 
@@ -60,14 +62,14 @@ Rectangle getRefreshRect() {
 	return refreshRect;
 }
 
-// Returns approximate pixel height for all items
+// Returns approximate pixel height for all directory items
 int refreshDirectory(FilePathList* pathItems) {
 	if (pathItems != NULL) {
 		UnloadDirectoryFiles(*pathItems);
 	}
 	
 	*pathItems = LoadDirectoryFiles(GetWorkingDirectory());
-	return (pathItems->count + 2) * 20;
+	return (pathItems->count + 2) * DIRECTORY_ITEM_HEIGHT;
 }
 
 char* openFileDialog() {
@@ -106,7 +108,7 @@ char* openFileDialog() {
 
 		BeginDrawing();
 
-			ClearBackground(WINDOW_BACKGROUND_COLOR);
+			ClearBackground(WINDOW_BG_COLOR);
 
 			dialogClosed = GuiWindowBox(windowBoxRect, "File Dialog");
 			GuiLabel(helpLabelRect, "Click to Select a ROM (*.ch8)");
@@ -124,7 +126,7 @@ char* openFileDialog() {
 			Rectangle itemRect = {
 				scrollView.x + scrollOffset.x + 5, 
 				scrollView.y + scrollOffset.y,
-				scrollViewSize.width, 20
+				scrollViewSize.width, DIRECTORY_ITEM_HEIGHT
 			};
 
 			if (GuiLabelButton(itemRect, "#3#Go Up a Directory (..)")) {
@@ -167,13 +169,13 @@ char* openFileDialog() {
 						break;
 					}
 
-					ChangeDirectory(pathItems.paths[i]);
+					ChangeDirectory(pathItem);
 					scrollViewSize.height = refreshDirectory(&pathItems);
 
 					break;
 				}
 
-				itemRect.y += 20;
+				itemRect.y += DIRECTORY_ITEM_HEIGHT;
 			}
 
 			EndScissorMode();
