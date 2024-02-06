@@ -1,7 +1,10 @@
 # Chip-8 Emulator
 A Chip-8 "Emulator" (technically interpreter) written in C using Raylib.
 
-Type `make release` to compile and then run the executable.
+### Build
+Compile [raylib](https://github.com/raysan5/raylib/wiki) as a static library and put the compiled libraylib.a in the "lib" folder.
+
+Then type `make release` to compile and run the executable.
 
 ### Controls
 The Keyboard for Chip-8 Systems looked like this:
@@ -19,13 +22,18 @@ Z X C V     A 0 B F
 
 Most Games use 2, Q, E, S for movement and W as an extra action.
 
-The emulator can pause execution by pressing SPACE and pressing P restarts the game.
+#### Emulator Keybindings
+- `SPACE` key to pause the emulator.
+- `P` key to restart the game.
+- `O` key to open file dialog and select a new rom.
+- `;` key to open the debugger.
+- `L` key to run the game at a slower clock speed (for debugging).
 
 ### Compatibility
 This emulator should work with most of the Chip-8 roms found on the internet.
 Quirks for 8XY6/8XYE and FX55/FX65 are not implemented.
 
-Some example games are provided in the "roms" folder
+Some example games are provided in the "roms" folder.
 
 ### Resources
 - https://tobiasvl.github.io/blog/write-a-chip-8-emulator/
