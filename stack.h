@@ -1,6 +1,6 @@
 #pragma once
 
-#define STACK_SIZE 32
+#define STACK_SIZE 16
 
 typedef struct Stack {
 	unsigned short values[STACK_SIZE];

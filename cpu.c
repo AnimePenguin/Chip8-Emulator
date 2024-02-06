@@ -15,10 +15,10 @@ void clearScreenBuffer(BYTE screenBuffer[H][W]) {
 
 // Opcode D instruction
 void drawSprite(BYTE nibble[], CPU* cpu, BYTE memory[], BYTE screenBuffer[H][W]) {
-	cpu->registers[0xF] = 0;
-
 	char x = cpu->registers[nibble[1]] % W;
 	char y = cpu->registers[nibble[2]] % H;
+
+	cpu->registers[0xF] = 0;
 
 	for (int i = 0; i < nibble[3]; i++) {
 		BYTE row = memory[cpu->indexRegister + i];
@@ -54,6 +54,8 @@ void doALUCalculation(BYTE nibble[], BYTE registers[]) {
 	BYTE* VY = &registers[nibble[2]];
 	BYTE* VF = &registers[0xF];
 
+	BYTE carry;
+
 	switch (nibble[3]) {
 		case 0x0:
 			*VX = *VY;
@@ -72,34 +74,44 @@ void doALUCalculation(BYTE nibble[], BYTE registers[]) {
 			break;
 
 		case 0x4:
-			*VF = (255 - *VX) < *VY ? 1 : 0;
+			carry = (255 - *VX) < *VY ? 1 : 0;
+
 			*VX += *VY;
+			*VF = carry;
 			break;
 
 		case 0x5:
-			*VF = *VX > *VY ? 1 : 0;
+			carry = *VX >= *VY ? 1 : 0;
+
 			*VX -= *VY;
+			*VF = carry;
 			break;
 
 		case 0x6:
-			*VF = *VX & 1;
+			carry = *VX & 1;
+
 			*VX >>= 1;
+			*VF = carry;
 			break;
 
 		case 0x7:
-			*VF = *VY > *VX ? 1 : 0;
+			carry = *VY >= *VX ? 1 : 0;
+
 			*VX = *VY - *VX;
+			*VF = carry;
 			break;
 
 		case 0xE:
-			*VF = *VX >> 7;
+			carry = *VX >> 7;
+
 			*VX <<= 1;
+			*VF = carry;
 			break;
 	}
 }
 
 // Opcode F instructions
-void specialFunctions(BYTE NN, BYTE nibble[], CPU* cpu, BYTE memory[]) {
+void miscFunctions(BYTE NN, BYTE nibble[], CPU* cpu, BYTE memory[]) {
 	BYTE* VX = &cpu->registers[nibble[1]];
 
 	switch (NN) {
@@ -179,7 +191,7 @@ void doCPUCycle(CPU* cpu, BYTE memory[], BYTE screenBuffer[H][W]) {
 			} else if (NNN == 0x0EE) {
 				cpu->programCounter = stackPop(&cpu->stack);
 			} else {
-				TraceLog(LOG_INFO, TextFormat("Call to 0x%04x", NNN));
+				TraceLog(LOG_INFO, TextFormat("Call to 0x%03x", NNN));
 			}
 
 			break;
@@ -260,7 +272,7 @@ void doCPUCycle(CPU* cpu, BYTE memory[], BYTE screenBuffer[H][W]) {
 			break;
 
 		case 0xF:
-			specialFunctions(NN, nibble, cpu, memory);
+			miscFunctions(NN, nibble, cpu, memory);
 			break;
 	}
 }

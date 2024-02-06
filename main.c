@@ -1,4 +1,7 @@
-#include "external/raylib.h"
+#define SUPPORT_SCROLLBAR_KEY_INPUT
+#define RAYGUI_IMPLEMENTATION
+
+#include "external\raygui.h"
 
 #include "emulator.h"
 
@@ -13,6 +16,10 @@ int main(int argc, char* argv[]) {
 	InitAudioDevice();
 	SetMasterVolume(0.25);
 
+	GuiLoadStyle("resources/style_jungle.rgs");
+	GuiSetStyle(SCROLLBAR, SCROLL_SPEED, 10);
+	GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, 18);
+
 	char* fileName = NULL;
 
 	if (argc > 1) {
@@ -23,20 +30,9 @@ int main(int argc, char* argv[]) {
 			TraceLog(LOG_ERROR, TextFormat("\"%s\" does not Exist", argv[1]));
 		}
 
-	} else {
-		TraceLog(LOG_INFO, "No ROM was Provided");
 	}
 
-	if (fileName == NULL) {
-		fileName = openFileDialog();
-	}
-
-	if (fileName != NULL) {
-		initEmulator(fileName);
-		MemFree(fileName);
-	} else {
-		initEmulator("resources/no_rom.ch8");
-	}
+	initEmulator(fileName);
 
 	CloseAudioDevice();
 	CloseWindow();

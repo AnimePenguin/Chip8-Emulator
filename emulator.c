@@ -1,13 +1,19 @@
 #include <stdbool.h>
 
-#include "external/raylib.h"
-
 #include "emulator.h"
+#include "debug_menu.h"
 #include "cpu.h"
 
-// Drawing Consts
+#define FALLBACK_ROM "resources/no_rom.ch8"
+
 #define CHIP8_BG_COLOR BLACK
 #define CHIP8_PIXEL_COLOR WHITE
+
+#define PAUSE_KEY KEY_SPACE
+#define SLOW_MODE_KEY KEY_L
+#define DEBUG_KEY KEY_SEMICOLON
+#define CHANGE_ROM_KEY KEY_O
+#define RESTART_KEY KEY_P
 
 const BYTE FONT[] = {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -32,6 +38,10 @@ void loadRomToMemory(char* fileName, BYTE memory[]) {
 	int dataSize;
 	BYTE* fileData = LoadFileData(fileName, &dataSize);
 
+	if (dataSize >= (MEM_SIZE - ROM_ADDRESS)) {
+		TraceLog(LOG_FATAL, "ROM exceeds Chip-8 memory size");
+	}
+
 	for (int i = 0; i <= dataSize; i++) {
 		memory[ROM_ADDRESS + i] = fileData[i];
 	}
@@ -39,9 +49,13 @@ void loadRomToMemory(char* fileName, BYTE memory[]) {
 	UnloadFileData(fileData);
 }
 
-Rectangle getDrawArea() {
+Rectangle getDrawArea(bool useHalfScreen) {
 	int width = GetScreenWidth();
 	int height = GetScreenHeight();
+
+	if (useHalfScreen) {
+		height /= 2;
+	}
 
 	Vector2 drawSize = {width, width/2};
 
@@ -66,35 +80,53 @@ Rectangle getDrawArea() {
 }
 
 void drawScreen(BYTE screenBuffer[H][W], const Rectangle* drawArea) {
-	BeginDrawing();
+	ClearBackground(WINDOW_BG_COLOR);
+	DrawRectangleRec(*drawArea, CHIP8_BG_COLOR);
 
-		ClearBackground(WINDOW_BG_COLOR);
-		DrawRectangleRec(*drawArea, CHIP8_BG_COLOR);
+	int blockSize = drawArea->width / W;
 
-		int blockSize = drawArea->width / W;
-
-		for (int y = 0; y < H; y++) {
-			for (int x = 0; x < W; x++) {
-				if (!screenBuffer[y][x]) {
-					continue;
-				}
-
-				DrawRectangle(
-					drawArea->x + x*blockSize,
-					drawArea->y + y*blockSize, 
-					blockSize, blockSize, CHIP8_PIXEL_COLOR
-				);
+	for (int y = 0; y < H; y++) {
+		for (int x = 0; x < W; x++) {
+			if (!screenBuffer[y][x]) {
+				continue;
 			}
-		}
 
-	EndDrawing();
+			DrawRectangle(
+				drawArea->x + x*blockSize,
+				drawArea->y + y*blockSize, 
+				blockSize, blockSize, CHIP8_PIXEL_COLOR
+			);
+		}
+	}
 }
 
 void initEmulator(char* fileName) {
 	Sound beep = LoadSound("resources/beep.wav");
 
-	emulator_start:
+	if (fileName == NULL) {
+		fileName = openFileDialog();
 
+		if (fileName == NULL) {
+			fileName = MemAlloc((TextLength(FALLBACK_ROM) + 1) * sizeof(char));
+			TextCopy(fileName, FALLBACK_ROM);
+		}
+	}
+
+	double clockPeriod = CPU_CLOCK_PERIOD;
+
+	bool slowMode = false;
+	bool showDebugMenu = false;
+
+	bool shouldResizeWindow = false;
+
+	Rectangle drawArea = getDrawArea(showDebugMenu);
+
+	Rectangle menuDrawArea = getDrawArea(true);
+	menuDrawArea.y += menuDrawArea.height;
+
+	DebugMenuContext debugContext = newDebugMenuContext(&menuDrawArea);
+
+	emulator_start:
 	CPU cpu = {
 		.programCounter = ROM_ADDRESS,
 		.indexRegister = 0,
@@ -116,29 +148,60 @@ void initEmulator(char* fileName) {
 
 	BYTE screenBuffer[H][W] = {0};
 
-	Rectangle drawArea = getDrawArea();
-
 	double accClockTime = 0.0;
 	double acc60HzTime = 0.0;
 
 	double last_time = GetTime();
 
-	bool halted = false;
+	bool paused = false;
 
 	while (!WindowShouldClose()) {
-		if (IsKeyPressed(KEY_SPACE)) {
-			halted = !halted;
-		} else if (GetKeyPressed() == KEY_P) {
-			goto emulator_start; // Restart this function
+
+		shouldResizeWindow = IsWindowResized();
+
+		switch (GetKeyPressed()) {
+			case PAUSE_KEY:
+				paused = !paused;
+				break;
+
+			case SLOW_MODE_KEY:
+				slowMode = !slowMode;
+				clockPeriod = slowMode ? TIME_PERIOD_OF_60HZ : CPU_CLOCK_PERIOD;
+
+				break;
+
+			case DEBUG_KEY:
+				showDebugMenu = !showDebugMenu;
+				shouldResizeWindow = true;
+
+				break;
+
+			case CHANGE_ROM_KEY:
+				char* newFileName = openFileDialog();
+
+				shouldResizeWindow = true;
+
+				if (newFileName != NULL) {
+					MemFree(fileName);
+					fileName = newFileName;
+
+					goto emulator_start;
+				}
+
+				break;
+
+			case RESTART_KEY:
+				goto emulator_start; // Restart Chip-8 components
+				break;
 		}
 
-		if (IsWindowResized()) {
-			drawArea = getDrawArea();
-		}
+		if (shouldResizeWindow) {
+			drawArea = getDrawArea(showDebugMenu);
 
-		if (halted) {
-			drawScreen(screenBuffer, &drawArea);
-			continue;
+			menuDrawArea = getDrawArea(true);
+			menuDrawArea.y += menuDrawArea.height;
+
+			resizeDebugMenu(&menuDrawArea, &debugContext);
 		}
 
 		double delta = GetTime() - last_time;
@@ -147,27 +210,46 @@ void initEmulator(char* fileName) {
 		accClockTime += delta;
 		acc60HzTime += delta;
 
-		if (accClockTime >= CLOCK_PERIOD) {
+		if (accClockTime >= clockPeriod && !paused) {
 			accClockTime = 0;
 
 			doCPUCycle(&cpu, memory, screenBuffer);
 		}
 
-		if (acc60HzTime >= 0.01666) {
-			acc60HzTime = 0;
+		if (acc60HzTime >= TIME_PERIOD_OF_60HZ) {
 
-			if (cpu.delayTimer) {
-				cpu.delayTimer--;
+			BeginDrawing();
+
+				drawScreen(screenBuffer, &drawArea);
+				
+				if (showDebugMenu) {
+					drawDebugMenu(&cpu, memory, &debugContext);
+				}
+
+				if (paused) {
+					DrawText("Paused", 4, 4, 16, GRAY);
+				} else if (slowMode) {
+					DrawText("Slow Mode", 4, 4, 16, GRAY);
+				}
+
+			EndDrawing();
+
+			if (!paused) {
+				acc60HzTime = 0;
+
+				if (cpu.delayTimer) {
+					cpu.delayTimer--;
+				}
+
+				if (cpu.soundTimer) {
+					cpu.soundTimer--;
+					PlaySound(beep);
+				}
 			}
 
-			if (cpu.soundTimer) {
-				cpu.soundTimer--;
-				PlaySound(beep);
-			}
-
-			drawScreen(screenBuffer, &drawArea);
 		}
 	}
 	
+	MemFree(fileName);
 	UnloadSound(beep);
 }

@@ -1,11 +1,8 @@
 #include <stdbool.h>
 
-#include "external\raylib.h"
-
-#define RAYGUI_IMPLEMENTATION
 #include "external\raygui.h"
 
-#include "constants.h"
+#include "emulator.h"
 
 #define DIALOG_WIDTH 480
 #define DIALOG_HEIGHT 460
@@ -64,7 +61,7 @@ Rectangle getRefreshRect() {
 
 // Returns approximate pixel height for all directory items
 int refreshDirectory(FilePathList* pathItems) {
-	if (pathItems != NULL) {
+	if (pathItems->count != 0 && pathItems != NULL) {
 		UnloadDirectoryFiles(*pathItems);
 	}
 	
@@ -74,8 +71,6 @@ int refreshDirectory(FilePathList* pathItems) {
 
 char* openFileDialog() {
 	char* file = NULL;
-
-	GuiLoadStyle("resources/style_jungle.rgs");
 
 	SetTargetFPS(60);
 
@@ -93,7 +88,7 @@ char* openFileDialog() {
 	bool dialogClosed = false;
 	bool showAllFiles = false;
 
-	FilePathList pathItems;
+	FilePathList pathItems = {};
 	scrollViewSize.height = refreshDirectory(&pathItems);
 
 	while (!WindowShouldClose() && !dialogClosed) {
@@ -113,8 +108,14 @@ char* openFileDialog() {
 			dialogClosed = GuiWindowBox(windowBoxRect, "File Dialog");
 			GuiLabel(helpLabelRect, "Click to Select a ROM (*.ch8)");
 
+			GuiCheckBox(checkBoxRect, "Show All Files", &showAllFiles);
+
+			if (GuiButton(refreshRect, "#211#")) {
+				scrollViewSize.height = refreshDirectory(&pathItems);
+			}
+
 			GuiScrollPanel(
-				scrollPanelRect, 0, scrollViewSize,
+				scrollPanelRect, NULL, scrollViewSize,
 				&scrollOffset, &scrollView
 			);
 
@@ -162,7 +163,7 @@ char* openFileDialog() {
 				if (isOnScreen && GuiLabelButton(itemRect, fileName)) {
 
 					if (IsPathFile(pathItem)) {
-						file = RL_MALLOC(TextLength(pathItem) * sizeof(char));
+						file = MemAlloc((TextLength(pathItem) + 1) * sizeof(char));
 						TextCopy(file, pathItem);
 
 						dialogClosed = true;
@@ -179,12 +180,6 @@ char* openFileDialog() {
 			}
 
 			EndScissorMode();
-
-			GuiCheckBox(checkBoxRect, "Show All Files", &showAllFiles);
-
-			if (GuiButton(refreshRect, "#211#")) {
-				scrollViewSize.height = refreshDirectory(&pathItems);
-			}
 			
 		EndDrawing();
 	}

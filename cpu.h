@@ -4,12 +4,12 @@
 #include "stack.h"
 
 typedef struct CPU {
-	unsigned int programCounter;
+	unsigned short programCounter;
 	unsigned short indexRegister;
 
 	Stack stack;
 
-	BYTE registers[16];
+	BYTE registers[NUM_OF_REGISTERS];
 
 	BYTE delayTimer;
 	BYTE soundTimer;

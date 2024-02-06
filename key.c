@@ -14,13 +14,28 @@ const KeyBind keyMap[] = {
 	{KEY_Z  , 0xA}, {KEY_X  , 0x0}, {KEY_C    , 0xB}, {KEY_V   , 0xF},
 };
 
+BYTE guiHeldKey = NO_PRESSED_KEY;
+BYTE guiReleasedKey = NO_PRESSED_KEY;
+
 BYTE getKeyInHex(bool checkHeld) {
+
+	if (checkHeld) {
+		if (guiHeldKey != NO_PRESSED_KEY) {
+			return guiHeldKey;
+		}
+
+	} else {
+		if (guiReleasedKey != NO_PRESSED_KEY) {
+			return guiReleasedKey;
+		}
+	}
+
+	// Use IsKeyDown function if checkHeld else use IsKeyReleased function
+	bool (*checkKey)(int) = checkHeld ? &IsKeyDown : &IsKeyReleased;
+
 	for (int i = 0; i <= 0xF; i++) {
 
-		if (checkHeld && IsKeyDown(keyMap[i].key)) {
-			return keyMap[i].hex;
-
-		} else if (!checkHeld && IsKeyReleased(keyMap[i].key)) {
+		if ((*checkKey)(keyMap[i].key)) {
 			return keyMap[i].hex;
 		}
 
